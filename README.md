@@ -6,6 +6,7 @@ How to Compile and Run:
 to compile:  g++ c++17 -O3 -o a filename.cpp
 
 to run :  ./a
+
 Readme Link : https://github.com/Nishit-Nilay/DAA_Assignment1/edit/main/README.md
 ## Individual Contributions :
 **Rithvik Raajha(2022A7PS1361H)**:Code of 3 algorithms and optimization.
