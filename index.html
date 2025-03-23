@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Design and Analysis of Algorithm - Assignment 1</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #e0eafc, #cfdef3);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    header {
+      background-color: #1a1a2e;
+      color: white;
+      padding: 40px 20px;
+      font-size: 32px;
+      font-weight: 600;
+      width: 100%;
+      text-align: center;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .hero-section {
+      margin-top: 60px;
+      text-align: center;
+    }
+    .hero-section h2 {
+      font-size: 28px;
+      color: #142850;
+      margin-bottom: 20px;
+    }
+    .hero-section p {
+      font-size: 16px;
+      color: #444;
+      max-width: 700px;
+      margin: 0 auto 50px auto;
+    }
+    .button-container {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 40px;
+      padding: 20px;
+    }
+    .algo-button {
+      background: linear-gradient(135deg, #0074e4, #00b894);
+      color: white;
+      font-size: 20px;
+      padding: 25px 50px;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 10px 20px rgba(0, 0, 0, 0.15);
+      min-width: 280px;
+    }
+    .algo-button:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 12px 24px rgba(0, 0, 0, 0.2);
+    }
+    .footer {
+      margin-top: auto;
+      padding: 30px 20px;
+      background-color: #1a1a2e;
+      color: white;
+      width: 100%;
+      text-align: center;
+      font-size: 14px;
+    }
+    .sparkle {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      background-color: white;
+      border-radius: 50%;
+      animation: sparkle 5s linear infinite;
+    }
+    @keyframes sparkle {
+      from {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+      }
+      to {
+        transform: translateY(100vh) scale(0.5);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    Design and Analysis of Algorithm - Assignment 1
+  </header>
+
+  <div class="hero-section">
+    <h2>Select an Algorithm to Explore</h2>
+    <p>Choose one of the following algorithms to explore the clique distribution analysis performed on three real-world datasets: Email-Enron, Wiki-Vote, and AS-Skitter.</p>
+  </div>
+
+  <div class="button-container">
+    <button class="algo-button" onclick="location.href='chiba.html'">
+      Arboricity and Subgraph Listing<br>by Chiba & Nishizeki
+    </button>
+    <button class="algo-button" onclick="location.href='bron.html'">
+      The Bron–Kerbosch Algorithm
+    </button>
+    <button class="algo-button" onclick="location.href='expand.html'">
+      Expand Algorithm<br>by E. Tomita et al.
+    </button>
+  </div>
+  <div class="clique-info" style="margin: 50px auto; max-width: 900px; background: white; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); padding: 40px; line-height: 1.7; color: #222;">
+    <h2 style="text-align: center; color: #1a1a2e; margin-bottom: 30px;">Understanding Cliques in Graph Theory</h2>
+    <p><strong>Definition:</strong> A <strong>clique</strong> in a graph G is a subset of vertices where every two vertices are connected by an edge, forming a complete subgraph.</p>
+    <p><strong>Complete Subgraph:</strong> A clique is essentially a complete subgraph where all possible edges between vertices exist.</p>
+    <p><strong>Examples:</strong></p>
+    <ul style="padding-left: 20px;">
+      <li>A single vertex is a clique of size 1.</li>
+      <li>An edge between two vertices forms a clique of size 2.</li>
+      <li>A triangle (three vertices all connected) is a clique of size 3.</li>
+    </ul>
+    <p><strong>Maximal Clique:</strong> A clique that cannot be extended by adding any vertex from the graph without breaking the complete connection is called a <strong>maximal clique</strong>. It is not necessarily the largest clique in size but is the largest within its neighborhood.</p>
+    <p><strong>Formal Definition:</strong> A subgraph H of a graph G is a maximal clique if H is isomorphic to a complete graph and there exists no vertex v in V(G)\V(H) such that v is connected to all vertices of H.</p>
+  
+    <div style="background-color: #f0f8ff; padding: 20px; border-left: 5px solid #00b894; margin-top: 30px;">
+        <img src="img1.png" alt="Clique Examples" style="width: 100%; border-radius: 12px; margin-bottom: 30px;">
+      <p><strong>Image Description:</strong> <br>The red subgraph in the first image is <strong>not a clique</strong> (missing an edge). The second is a <strong>non-maximal clique</strong> as an external vertex connects to all its members. The third and fourth are both <strong>maximal cliques</strong>, as no external vertex connects to all their vertices, even though they differ in size.</p>
+    </div>
+  
+    <p style="margin-top: 30px;"><strong>Clique Graph:</strong> A graph where each vertex represents a maximal clique of the original graph, and two vertices are connected if their corresponding cliques share at least one vertex.</p>
+    <p><strong>Applications:</strong> Cliques are heavily used in:</p>
+    <ul style="padding-left: 20px;">
+      <li>Social network analysis (detecting tightly connected groups).</li>
+      <li>Bioinformatics (protein interaction networks).</li>
+      <li>Computer vision (object recognition).</li>
+      <li>Database design and cybersecurity.</li>
+    </ul>
+    <p><strong>Computational Complexity:</strong> Finding the largest clique (maximum clique problem) is NP-complete — a central challenge in algorithm design and complexity theory.</p>
+  
+    <div style="margin-top: 40px;">
+      <p><strong>Additional Reading:</strong></p>
+      <ul style="padding-left: 20px;">
+        <li><a href="https://math.stackexchange.com/questions/758263/whats-maximal-clique" target="_blank" style="color: #0074e4;">Math StackExchange: What is a Maximal Clique?</a></li>
+        <li><a href="https://www.geeksforgeeks.org/cliques-in-graph/" target="_blank" style="color: #0074e4;">GeeksforGeeks: Cliques in Graph</a></li>
+      </ul>
+    </div>
+  </div>
+  
+
+  <div class="footer">
+    &copy; 2025 DAA Assignment Project | Created for Visualization of Clique Algorithms
+  </div>
+
+
+  <script>
+    // Sparkling animation effect
+    const createSparkles = () => {
+      for (let i = 0; i < 20; i++) {
+        const sparkle = document.createElement('div');
+        sparkle.classList.add('sparkle');
+        sparkle.style.left = Math.random() * 100 + 'vw';
+        sparkle.style.animationDelay = (Math.random() * 10) + 's';
+        document.body.appendChild(sparkle);
+      }
+    };
+    createSparkles();
+  </script>
+</body>
+</html>

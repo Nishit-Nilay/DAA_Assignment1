@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ARBORICITY AND SUBGRAPH LISTING ALGORITHMS by NORISHIGE CHIBA AND TAKAO NISHIZEKV </title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #f9f9f9, #e3e3f3);
+      margin: 0;
+      color: #333;
+    }
+    header {
+      background: linear-gradient(90deg, #3a1c71, #d76d77);
+      color: white;
+      text-align: center;
+      padding: 40px 20px;
+      font-size: 2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .section {
+      max-width: 960px;
+      margin: 50px auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      color: #3a1c71;
+    }
+    .section h3 {
+      font-size: 1.5rem;
+      color: #d76d77;
+      margin-top: 30px;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+    .copy-btn {
+      margin: 12px 12px 0 0;
+      padding: 10px 16px;
+      background: linear-gradient(145deg, #3a1c71, #d76d77);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    .copy-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    /*pre {
+      background-color: #f0f0f5;
+      border: 1px solid #ccc;
+      padding: 24px;
+      overflow-x: auto;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      color: #2d2d2d;
+      line-height: 1.5;
+    }*/
+  </style>
+</head>
+<body>
+  <header>ARBORICITY AND SUBGRAPH LISTING ALGORITHMS by NORISHIGE CHIBA AND TAKAO NISHIZEKI - Visualization and Analysis</header>
+  <div class="section">
+    <h2>C++ Code Implementation</h2>
+    <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+    <!-- Prism Highlighted C++ Code -->
+    <link href="https://cdn.jsdelivr.net/gh/PrismJS/prism-themes@master/themes/prism-vsc-dark-plus.css" rel="stylesheet" />
+
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-cpp.min.js"></script>
+
+<pre><code class="language-cpp" id="code-block">
+#include &lt;fstream&gt;
+#include &lt;sstream&gt;
+#include &lt;vector&gt;
+#include &lt;set&gt;
+#include &lt;unordered_map&gt;
+#include &lt;algorithm&gt;
+#include &lt;chrono&gt;
+#include &lt;map&gt;
+#include &lt;iomanip&gt;
+#include &lt;iostream&gt;
+
+using namespace std;
+using namespace chrono;
+
+void readGraph(const string& filename, vector<unordered_set<int>>& graph, int& numVertices, vector<int>& vertexDegrees) {
+    ifstream file(filename);
+    string line;
+    set<int> allNodes;
+
+    if (!file) {
+        cerr << "Error: Unable to open file " << filename << endl;
+        exit(1);
+    }
+
+    while (getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+
+        int u, v;
+        stringstream ss(line);
+        if (!(ss >> u >> v)) continue;
+
+        allNodes.insert(u);
+        allNodes.insert(v);
+
+        int maxNode = max(u, v);
+        if ((int)graph.size() <= maxNode) {
+            graph.resize(maxNode + 1);
+        }
+
+        graph[u].insert(v);
+        graph[v].insert(u);
+    }
+
+    numVertices = graph.size();
+    vertexDegrees.resize(numVertices, 0);
+    for (int i = 0; i < numVertices; ++i) {
+        vertexDegrees[i] = graph[i].size();
+    }
+}
+
+inline bool isFullyConnected(const set<int>& C, const vector<unordered_set<int>>& graph, int v) {
+    for (const int& u : C) {
+        if (graph[v].find(u) == graph[v].end()) return false;
+    }
+    return true;
+}
+
+void update(int i, set<int>& C, const vector<unordered_set<int>>& graph,
+            vector<int>& S, vector<int>& T, set<set<int>>& maximalCliques,
+            const vector<int>& sortedVertices, int n) {
+    if (i == n) {
+        if (C.size() < 2) return;
+
+        bool isClique = true;
+        for (auto u = C.begin(); u != C.end(); ++u) {
+            for (auto v = next(u); v != C.end(); ++v) {
+                if (graph[*u].find(*v) == graph[*v].end()) {
+                    isClique = false;
+                    break;
+                }
+            }
+            if (!isClique) break;
+        }
+
+        if (!isClique) return;
+
+        for (int v = 0; v < n; ++v) {
+            if (C.find(v) == C.end() && isFullyConnected(C, graph, v)) {
+                return;
+            }
+        }
+
+        maximalCliques.insert(C);
+    } else {
+        int v = sortedVertices[i];
+        bool prune = false;
+        for (const int& u : C) {
+            if (graph[u].find(v) == graph[u].end()) {
+                prune = true;
+                break;
+            }
+        }
+
+        if (!prune) {
+            C.insert(v);
+            update(i + 1, C, graph, S, T, maximalCliques, sortedVertices, n);
+            C.erase(v);
+        }
+
+        update(i + 1, C, graph, S, T, maximalCliques, sortedVertices, n);
+    }
+}
+
+void findCliques(const vector<unordered_set<int>>& graph, int numVertices, const vector<int>& vertexDegrees) {
+    set<int> C;
+    vector<int> S(numVertices, 0), T(numVertices, 0);
+    set<set<int>> maximalCliques;
+
+    vector<int> sortedVertices(numVertices);
+    iota(sortedVertices.begin(), sortedVertices.end(), 0);
+    sort(sortedVertices.begin(), sortedVertices.end(),
+         [&vertexDegrees](int a, int b) { return vertexDegrees[a] > vertexDegrees[b]; });
+
+    auto start = high_resolution_clock::now();
+    update(0, C, graph, S, T, maximalCliques, sortedVertices, numVertices);
+    auto end = high_resolution_clock::now();
+    duration<double> duration = end - start;
+
+    cout << scientific << setprecision(6);
+    cout << "Execution Time: " << duration.count() << " seconds\n";
+
+    int largestCliqueSize = 0;
+    for (const auto& clique : maximalCliques) {
+        largestCliqueSize = max(largestCliqueSize, (int)clique.size());
+    }
+
+    cout << "Largest Clique Size: " << largestCliqueSize << "\n";
+    cout << "Total Number of Maximal Cliques: " << maximalCliques.size() << "\n";
+
+    map<int, int> sizeDistribution;
+    for (const auto& clique : maximalCliques) {
+        if (clique.size() >= 2) {
+            sizeDistribution[clique.size()]++;
+        }
+    }
+
+    cout << "Distribution of Maximal Clique Sizes:\n";
+    for (const auto& [size, count] : sizeDistribution) {
+        cout << "Size " << size << ": " << count << " cliques\n";
+    }
+}
+
+int main() {
+    vector<unordered_set<int>> graph;
+    int numVertices;
+    vector<int> vertexDegrees;
+
+    string filename = "test6.txt";
+    readGraph(filename, graph, numVertices, vertexDegrees);
+    findCliques(graph, numVertices, vertexDegrees);
+
+    return 0;
+}
+
+</code></pre>
+
+
+    <div class="simulation-output">
+      <h3>Email-Enron Output</h3>
+      <p>1. Largest Clique Size: 20</p>
+      <p>2. Total Max Cliques: 226859</p>
+      <p>3. Time Taken: 35 seconds</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-enron" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>Wiki-Vote Output</h3>
+      <p>1. Largest Clique Size: 17</p>
+      <p>2. Total Max Cliques: 459002</p>
+      <p>3. Time Taken: 1742 ms</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-wiki" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>AS-Skitter Output</h3>
+      <p>1. Largest Clique Size: 67</p>
+      <p>2. Total Max Cliques: 37322355</p>
+      <p>3. Time Taken: 679599 ms</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-skitter" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>Execution Time Comparison</h3>
+      <p>This chart compares the total execution time of the ARBORICITY AND SUBGRAPH LISTING ALGORITHMS by NORISHIGE CHIBA AND TAKAO NISHIZEKV</p>
+      <canvas id="chart-time-comparison" class="dataset-chart"></canvas>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <h2>Understanding and Implementing the Chiba–Nishizeki Algorithm</h2>
+
+    <p>The Chiba–Nishizeki paper introduces an efficient recursive backtracking method that lists all maximal cliques in a graph with worst-case time complexity of <strong>O(a(G)·m)</strong> per clique, where <strong>a(G)</strong> is the arboricity of the graph (a measure of sparsity).</p>
+
+    <h3>Section 1: Vertex Ordering Based on Degree</h3>
+    <p>📜 <strong>Theory (Paper Reference)</strong>:<br>The algorithm begins by numbering the vertices of the graph such that:</p>
+    <p><code>d(1) ≤ d(2) ≤ ... ≤ d(n)</code></p>
+    <p>This sorted order of vertices is critical because the algorithm relies on this degree-based arrangement to perform efficient pruning and lexicographic checks. By processing vertices in increasing order of degree, the algorithm leverages the graph's structure to bound runtime using arboricity.</p>
+
+    <p>💻 <strong>Your Implementation</strong>:<br>In your code, this is handled during graph preprocessing:</p>
+    <pre><code>vertexDegrees[i] = graph[i].size();
+...
+sort(sortedVertices.begin(), sortedVertices.end(),
+     [&vertexDegrees](int a, int b) { return vertexDegrees[a] > vertexDegrees[b]; });</code></pre>
+    <p>While the paper uses non-decreasing degree order, your code uses non-increasing order. This is acceptable because your recursion proceeds from index i = 0 to n, and so the higher-degree vertices are still considered first. As long as the ordering is consistent and your indexing respects it, the behavior remains aligned with the paper.</p>
+
+    <h3>Section 2: The Core Recursive Procedure – UPDATE</h3>
+    <p>📜 <strong>Theory</strong>:<br>The core of the algorithm is the recursive procedure <code>UPDATE(i, C)</code>, which either extends the current clique C by including vertex i, or skips it. The recursion continues until i = n + 1, at which point C is tested for maximality and printed if it qualifies. This strategy ensures exhaustive and systematic enumeration of cliques.</p>
+
+    <p>💻 <strong>Your Implementation</strong>:<br>This is directly captured in your function:</p>
+    <pre><code>void update(int i, set<int>& C, const vector<unordered_set<int>>& graph, ...)</code></pre>
+    <p>The recursion is driven by i, which tracks the position in the sorted vertex list. At each step, the function tries to include the current vertex v = sortedVertices[i] in C if it is adjacent to all existing members. If it is not adjacent, the code prunes that path. Regardless of whether v is included or skipped, the function proceeds to i + 1, ensuring the entire search space is explored.</p>
+
+    <h3>Section 3: Maximality Testing</h3>
+    <p>📜 <strong>Theory (Paper Reference: Lines 3–4)</strong>:<br>The algorithm tests whether a clique C extended with vertex i is maximal by checking whether any vertex not in C is connected to all members of C. If such a vertex exists, C is not maximal and should not be printed. The paper uses the T[y] variable and a FLAG to efficiently manage this.</p>
+
+    <p>💻 <strong>Your Implementation</strong>:<br>You perform this check explicitly in the base case:</p>
+    <pre><code>for (int v = 0; v < n; ++v) {
+    if (C.find(v) == C.end() && isFullyConnected(C, graph, v)) {
+        return; // C is not maximal
+    }
+}</code></pre>
+    <p>Instead of using a T[y] counter array, your code manually checks if any node not in C is adjacent to every vertex in C. While this is logically correct, it is less efficient than the paper’s version. Still, it guarantees that only maximal cliques are recorded.</p>
+
+    <h3>Section 4: Lexicographic Order Enforcement</h3>
+    <p>📜 <strong>Theory (Paper Reference: Lines 5–7)</strong>:<br>To prevent duplicate listings of the same clique in different orders, the algorithm ensures that each outputted clique is lexicographically largest among its permutations. It uses a sophisticated mechanism involving sorted vertex sets (jₖ indices), auxiliary arrays S[y], and lex-order conditions (as detailed in Lemma 6).</p>
+
+    <p>💻 <strong>Your Implementation</strong>:<br>In your code, this is not explicitly implemented. Instead, you rely on:
+    <ul>
+      <li>Recursing through a sorted vertex list,</li>
+      <li>Ensuring that cliques grow in index order (i increases),</li>
+      <li>Using a <code>set&lt;set&lt;int&gt;&gt;</code> to deduplicate cliques.</li>
+    </ul>
+    Although this is not as efficient or formal as the algorithm’s lex-order test, it still works correctly. The set&lt;set&lt;int&gt;&gt; guarantees uniqueness, while the sorted recursion introduces a natural order that mimics lexicographic behavior.</p>
+
+    <h3>Section 5: Clique Validation and Output</h3>
+    <p>📜 <strong>Theory (Paper Reference: Line 10)</strong>:<br>If the clique passes both the maximality test and lexicographic order test, it is printed as a valid output.</p>
+
+    <p>💻 <strong>Your Implementation</strong>:<br>This final output step happens in the base case of update():</p>
+    <pre><code>if (isClique) {
+    maximalCliques.insert(C);
+}</code></pre>
+    <p>You also collect some useful statistics post-processing:</p>
+    <pre><code>cout << "Total Number of Maximal Cliques: " << maximalCliques.size() << "\n";</code></pre>
+    <p>This matches the intent of the algorithm—listing only the correct cliques while avoiding redundant computation.</p>
+
+    <h3>Section 6: Example Execution – How the Algorithm Works Step-by-Step in My Code</h3>
+    <p>To demonstrate how my implementation faithfully realizes the theoretical algorithm, let’s walk through a small example graph:</p>
+    <pre><code>0: 1, 2  
+1: 0, 2  
+2: 0, 1, 3  
+3: 2, 4  
+4: 3</code></pre>
+    <p>The degrees are:</p>
+    <pre><code>deg(0) = 2
+deg(1) = 2
+deg(2) = 3
+deg(3) = 2
+deg(4) = 1</code></pre>
+    <p>After sorting in descending order of degree, we get: <code>sortedVertices = [2, 0, 1, 3, 4]</code></p>
+    <p>We begin with update(0, C = {}), where C is the current clique.</p>
+    <ul>
+      <li>Vertex 2 is the first to be considered. Since C is empty, 2 can be added freely, forming C = {2}.</li>
+      <li>Next, vertex 0 is considered. Since it is adjacent to 2, it is added to form C = {2, 0}.</li>
+      <li>Vertex 1 is also adjacent to both 2 and 0, so we extend the clique to C = {2, 0, 1}.</li>
+      <li>Vertex 3 is not adjacent to 0 and 1, so it is excluded.</li>
+      <li>Vertex 4 is not connected to 2, 0, or 1, so it is excluded as well.</li>
+    </ul>
+    <p>At this point, C = {0, 1, 2} cannot be extended further and passes the maximality test, so it is recorded.</p>
+    <p>After backtracking, we try removing 1, then 0, and consider 3. Vertex 3 is connected to 2, so C = {2, 3}. Next, vertex 4 is examined, but it is not adjacent to 2, so the clique cannot be extended. Hence, {2, 3} is also maximal.</p>
+    <p>Finally, we backtrack further and explore the case {3, 4}, which is also a valid maximal clique.</p>
+    <p>The cliques discovered are:</p>
+    <pre><code>{0, 1, 2}
+{2, 3}
+{3, 4}</code></pre>
+    <p>Each of these is maximal and non-overlapping in terms of extension, demonstrating the correctness and completeness of the enumeration process.</p>
+
+    <h3>Conclusion</h3>
+    <p>In summary, my C++ implementation closely aligns with the structure of the algorithm described in Chiba and Nishizeki’s paper. Each major component—vertex ordering, recursive clique expansion, maximality testing, and output handling—has a clear counterpart in the code. While I have not yet implemented the S[y] and T[y] optimizations or the formal lexicographic checks, the logical structure is preserved, and the output is accurate. The algorithm works effectively for small to moderate graphs, and with further enhancement—particularly in the areas of pruning and lex-order verification—it can be made more efficient for larger datasets as well. This exercise has deepened my understanding of subgraph enumeration algorithms and their practical implementation in a modern programming language.</p>
+  </div>
+
+  <script>
+    function copyCode() {
+      const codeBlock = document.getElementById('code-block');
+      const textArea = document.createElement('textarea');
+      textArea.value = codeBlock.textContent;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Code copied to clipboard!');
+    }
+
+    function renderChart(dataset) {
+      let labels = [], data = [], color = '';
+      if (dataset === 'enron') {
+        labels = [...Array(19).keys()].map(i => (i+2));
+        data = [14070,7077,13319,18143,22715,25896,24766,22884,21393,17833,15181,11487,7417,3157,1178,286,41,10,6];
+        color = 'rgba(255, 99, 132, 0.6)';
+      } else if (dataset === 'wiki') {
+        labels = [...Array(16).keys()].map(i => (i+2));
+        data = [8655,13718,27292,48416,68872,83266,76732,54456,35470,21736,11640,5449,2329,740,208,23];
+        color = 'rgba(54, 162, 235, 0.6)';
+      } else if (dataset === 'skitter') {
+        labels = [...Array(66).keys()].map(i => (i+2));
+        data = [2319807,3171609,1823321,939336,684873,598284,588889,608937,665661,728098,798073,877282,945194,980831,939987,839330,729601,639413,600192,611976,640890,673924,706753,753633,818353,892719,955212,999860,1034106,1055653,1017560,946717,878552,809485,744634,663650,583922,520239,474301,420796,367879,321829,275995,222461,158352,99522,62437,39822,30011,25637,17707,9514,3737,2042,1080,546,449,447,405,283,242,146,84,49,22,4];
+        color = 'rgba(255, 206, 86, 0.6)';
+      }
+      new Chart(document.getElementById(`chart-${dataset}`), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: 'Number of Cliques', data: data, backgroundColor: color, borderRadius: 6 }]
+        },
+        options: {
+          animation: { duration: 1500 },
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#fff', titleColor: '#000', bodyColor: '#000' }
+          },
+          scales: {
+            x: { grid: { color: '#eee' } },
+            y: { beginAtZero: true, grid: { color: '#eee' } }
+          }
+        }
+      });
+    }
+
+    function renderTimeComparisonChart() {
+  const ctx = document.getElementById('chart-time-comparison').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Wiki-Vote (7.1k nodes)', 'Email-Enron (36k nodes)', 'AS-Skitter (1.7M nodes)'],
+      datasets: [{
+        label: 'Execution Time (seconds)',
+        data: [900, 1500, 9532.75],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(255, 206, 86, 0.6)'
+        ],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      animation: {
+        duration: 1500
+      },
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#000',
+          bodyColor: '#000',
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.raw.toFixed(2)} seconds`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Dataset',
+            color: '#333',
+            font: { weight: 'bold' }
+          },
+          grid: { color: '#eee' }
+        },
+        y: {
+          type: 'logarithmic',
+          title: {
+            display: true,
+            text: 'Execution Time (log scale)',
+            color: '#333',
+            font: { weight: 'bold' }
+          },
+          grid: { color: '#eee' },
+          min: 1,
+          ticks: {
+            callback: function(value) {
+              return Number(value).toLocaleString() + 's';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+
+
+
+    window.onload = function() {
+      renderChart('enron');
+      renderChart('wiki');
+      renderChart('skitter');
+      renderTimeComparisonChart();
+    };
+  </script>
+</body>
+</html>

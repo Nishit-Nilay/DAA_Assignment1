@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bron–Kerbosch Algorithm</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #f9f9f9, #e3e3f3);
+      margin: 0;
+      color: #333;
+    }
+    header {
+      background: linear-gradient(90deg, #3a1c71, #d76d77);
+      color: white;
+      text-align: center;
+      padding: 40px 20px;
+      font-size: 2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .section {
+      max-width: 960px;
+      margin: 50px auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      color: #3a1c71;
+    }
+    .section h3 {
+      font-size: 1.5rem;
+      color: #d76d77;
+      margin-top: 30px;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+    .copy-btn {
+      margin: 12px 12px 0 0;
+      padding: 10px 16px;
+      background: linear-gradient(145deg, #3a1c71, #d76d77);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    .copy-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    /*pre {
+      background-color: #f0f0f5;
+      border: 1px solid #ccc;
+      padding: 24px;
+      overflow-x: auto;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      color: #2d2d2d;
+      line-height: 1.5;
+    }*/
+  </style>
+</head>
+<body>
+  <header>Bron–Kerbosch Algorithm - Visualization and Analysis</header>
+  <div class="section">
+    <h2>C++ Code Implementation</h2>
+    <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+    <!-- Prism Highlighted C++ Code -->
+    <link href="https://cdn.jsdelivr.net/gh/PrismJS/prism-themes@master/themes/prism-vsc-dark-plus.css" rel="stylesheet" />
+
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-cpp.min.js"></script>
+
+<pre><code class="language-cpp" id="code-block">
+#include &lt;fstream&gt;
+#include &lt;sstream&gt;
+#include &lt;vector&gt;
+#include &lt;set&gt;
+#include &lt;unordered_map&gt;
+#include &lt;algorithm&gt;
+#include &lt;chrono&gt;
+#include &lt;map&gt;
+#include &lt;iomanip&gt;
+#include &lt;iostream&gt;
+
+using namespace std;
+
+void BronKerboschPivot(set<int> P, set<int> R, set<int> X,
+                       const unordered_map<int, set<int>>& graph,
+                       vector<set<int>>& maximalCliques,
+                       int& largestCliqueSize,
+                       map<int, int>& cliqueSizeDistribution) {
+    if (P.empty() && X.empty()) {
+        maximalCliques.push_back(R);
+        largestCliqueSize = max(largestCliqueSize, static_cast<int>(R.size()));
+        cliqueSizeDistribution[R.size()]++;
+        return;
+    }
+
+    int pivot = -1, maxNeighbors = -1;
+    set<int> unionPX = P;
+    unionPX.insert(X.begin(), X.end());
+    for (int u : unionPX) {
+        int count = 0;
+        for (int neighbor : graph.at(u)) {
+            if (P.find(neighbor) != P.end()) count++;
+        }
+        if (count > maxNeighbors) {
+            maxNeighbors = count;
+            pivot = u;
+        }
+    }
+
+    set<int> diffP;
+    for (int v : P) {
+        if (graph.at(pivot).find(v) == graph.at(pivot).end())
+            diffP.insert(v);
+    }
+
+    for (int v : diffP) {
+        set<int> newP, newR(R), newX;
+        newR.insert(v);
+        for (int neighbor : graph.at(v)) {
+            if (P.find(neighbor) != P.end()) newP.insert(neighbor);
+            if (X.find(neighbor) != X.end()) newX.insert(neighbor);
+        }
+
+        BronKerboschPivot(newP, newR, newX, graph, maximalCliques, largestCliqueSize, cliqueSizeDistribution);
+        P.erase(v);
+        X.insert(v);
+    }
+}
+
+void BronKerboschDegeneracy(const unordered_map<int, set<int>>& graph,
+                            vector<set<int>>& maximalCliques,
+                            int& largestCliqueSize,
+                            map<int, int>& cliqueSizeDistribution) {
+    vector<pair<int, int>> vertices;
+    for (const auto& [v, neighbors] : graph) {
+        vertices.emplace_back(v, neighbors.size());
+    }
+
+    sort(vertices.begin(), vertices.end(), [](const pair<int, int>& a, const pair<int, int>& b) {
+        return a.second < b.second;
+    });
+
+    for (const auto& [vi, _] : vertices) {
+        set<int> P, X;
+        for (int neighbor : graph.at(vi)) {
+            if (neighbor > vi) P.insert(neighbor);
+            else X.insert(neighbor);
+        }
+        BronKerboschPivot(P, {vi}, X, graph, maximalCliques, largestCliqueSize, cliqueSizeDistribution);
+    }
+}
+
+unordered_map<int, set<int>> loadGraph(const string& filename) {
+    unordered_map<int, set<int>> graph;
+    ifstream file(filename);
+    string line;
+
+    while (getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+
+        stringstream ss(line);
+        int u, v;
+        if (ss >> u >> v) {
+            graph[u].insert(v);
+            graph[v].insert(u);
+        }
+    }
+
+    return graph;
+}
+
+int main() {
+    string filename = "test6.txt";
+
+    unordered_map<int, set<int>> graph = loadGraph(filename);
+
+    vector<set<int>> maximalCliques;
+    int largestCliqueSize = 0;
+    map<int, int> cliqueSizeDistribution;
+
+    auto startTime = chrono::high_resolution_clock::now();
+
+    BronKerboschDegeneracy(graph, maximalCliques, largestCliqueSize, cliqueSizeDistribution);
+
+    auto endTime = chrono::high_resolution_clock::now();
+    chrono::duration<double> executionTime = endTime - startTime;
+
+    cout << "Largest Clique Size: " << largestCliqueSize << endl;
+    cout << "Total Number of Maximal Cliques: " << maximalCliques.size() << endl;
+    cout << "Execution Time: " << fixed << setprecision(6) << executionTime.count() << " seconds" << endl;
+
+    cout << "Distribution of Maximal Clique Sizes:" << endl;
+    for (const auto& [size, count] : cliqueSizeDistribution) {
+        cout << "Size " << size << ": " << count << " cliques" << endl;
+    }
+
+    return 0;
+}
+
+</code></pre>
+
+
+    <div class="simulation-output">
+      <h3>Email-Enron Output</h3>
+      <p>1. Largest Clique Size: 20</p>
+      <p>2. Total Max Cliques: 226859</p>
+      <p>3. Time Taken: 35 seconds</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-enron" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>Wiki-Vote Output</h3>
+      <p>1. Largest Clique Size: 17</p>
+      <p>2. Total Max Cliques: 459002</p>
+      <p>3. Time Taken: 1742 ms</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-wiki" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>AS-Skitter Output</h3>
+      <p>1. Largest Clique Size: 67</p>
+      <p>2. Total Max Cliques: 37322355</p>
+      <p>3. Time Taken: 679599 ms</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-skitter" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>Execution Time Comparison</h3>
+      <p>This chart compares the total execution time of the Bron–Kerbosch algorithm (with degeneracy ordering and pivoting) across different datasets.</p>
+      <canvas id="chart-time-comparison" class="dataset-chart"></canvas>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <h2>Understanding and Implementing the Bron–Kerbosch Algorithm with Degeneracy Ordering and Pivoting</h2>
+  
+    <h3>1. Introduction</h3>
+    <p>The task of finding all maximal cliques in a graph is fundamental in graph theory and has a wide range of applications in fields like social network analysis, bioinformatics, and computer vision. A <strong>maximal clique</strong> is a subset of vertices that forms a complete subgraph and cannot be extended by including any additional adjacent vertex. This section explores the <strong>Bron–Kerbosch algorithm</strong>, a classic recursive backtracking approach for finding maximal cliques, and demonstrates an optimized implementation using <strong>degeneracy ordering</strong> and <strong>pivoting</strong>.</p>
+  
+    <h3>2. The Bron–Kerbosch Algorithm (Basic Version)</h3>
+    <p>This recursive algorithm uses three disjoint sets of vertices:</p>
+    <ul>
+      <li><strong>R</strong>: The current clique (in progress)</li>
+      <li><strong>P</strong>: Candidates to be added to the clique</li>
+      <li><strong>X</strong>: Vertices already processed (excluded from the current clique)</li>
+    </ul>
+    <p>If <code>P</code> and <code>X</code> are both empty, <code>R</code> is reported as a maximal clique. Otherwise, the algorithm picks a vertex <code>v</code> from <code>P</code>, recurses on it, and then moves <code>v</code> from <code>P</code> to <code>X</code>.</p>
+  
+    <h3>3. Pivoting Strategy (Tomita et al.)</h3>
+    <p>To enhance performance, Tomita et al. introduced a pivoting method. A pivot <code>u</code> is chosen from <code>P ∪ X</code> such that it has the most neighbors in <code>P</code>. The algorithm only explores those vertices in <code>P</code> that are <em>not neighbors</em> of <code>u</code>, significantly reducing recursive calls. This optimization improves performance to worst-case optimal time <code>O(3<sup>n/3</sup>)</code>.</p>
+  
+    <h3>4. Degeneracy Ordering</h3>
+    <p><strong>Degeneracy</strong> is the smallest number <code>d</code> such that every subgraph has a vertex with degree ≤ <code>d</code>. A <em>degeneracy ordering</em> ensures that each vertex has at most <code>d</code> neighbors that come later in the order. Using this ordering reduces the recursion depth and enhances performance, especially on sparse graphs.</p>
+  
+    <h3>5. Combined Algorithm: Bron–Kerbosch with Pivoting and Degeneracy Ordering</h3>
+    <ol>
+      <li>Compute a degeneracy ordering of the graph.</li>
+      <li>For each vertex <code>v</code> in this order:
+        <ul>
+          <li>Set <code>P</code> to neighbors of <code>v</code> that appear later in the order.</li>
+          <li>Set <code>X</code> to neighbors that appear earlier.</li>
+          <li>Call the pivoted Bron–Kerbosch algorithm with <code>(P, {v}, X)</code>.</li>
+        </ul>
+      </li>
+    </ol>
+    <p>This hybrid technique maintains correctness while drastically reducing recursive overhead in real-world graphs.</p>
+  
+    <h3>✅ My C++ Implementation: Explained in Detail</h3>
+  
+    <h4>🔧 Input and Preprocessing</h4>
+    <ul>
+      <li><strong>loadGraph()</strong>: Loads a graph from a text file (each line defines an edge <code>u v</code>), storing it as an adjacency list.</li>
+      <li><strong>convertToUndirected()</strong>: Ensures edges are bidirectional if input is a directed graph.</li>
+      <li><strong>convertToZeroBased()</strong>: Transforms all vertex IDs to 0-based indexing for cleaner processing.</li>
+    </ul>
+  
+    <h4>♻️ Degeneracy-Based Recursion: <code>BronKerboschDegeneracy()</code></h4>
+    <p>This function:</p>
+    <ul>
+      <li>Calculates vertex degrees and sorts them to simulate degeneracy ordering.</li>
+      <li>For each vertex <code>v</code>:
+        <ul>
+          <li><code>P</code> = neighbors with index &gt; v</li>
+          <li><code>X</code> = neighbors with index &lt; v</li>
+          <li>Calls the pivoted Bron–Kerbosch algorithm.</li>
+        </ul>
+      </li>
+    </ul>
+    <p>This matches the hybrid approach in the literature (e.g., Figure 4 in the original Bron–Kerbosch+Degeneracy paper).</p>
+  
+    <h4>🔁 Core Recursive Function: <code>BronKerboschPivot()</code></h4>
+    <ul>
+      <li>Base Case: If <code>P ∪ X</code> is empty, <code>R</code> is a maximal clique.</li>
+      <li>Selects a pivot <code>u</code> maximizing <code>|P ∩ N(u)|</code>.</li>
+      <li>Recurses only for vertices <code>v ∈ P \ N(u)</code>.</li>
+      <li>Tracks:
+        <ul>
+          <li>All maximal cliques</li>
+          <li>Largest clique size</li>
+          <li>Distribution of clique sizes</li>
+        </ul>
+      </li>
+    </ul>
+  
+    <h4>⏱️ Performance Measurement</h4>
+    <p>The code measures and prints:</p>
+    <ul>
+      <li>Execution time using <code>chrono</code></li>
+      <li>Total number of maximal cliques</li>
+      <li>Size of the largest clique</li>
+      <li>Distribution of clique sizes (e.g., how many cliques of size 3, 4, ...)</li>
+    </ul>
+    <p><strong>This makes the implementation efficient and scalable</strong> for large sparse networks commonly found in social and biological datasets.</p>
+  </div>
+
+  <script>
+    function copyCode() {
+      const codeBlock = document.getElementById('code-block');
+      const textArea = document.createElement('textarea');
+      textArea.value = codeBlock.textContent;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Code copied to clipboard!');
+    }
+
+    function renderChart(dataset) {
+      let labels = [], data = [], color = '';
+      if (dataset === 'enron') {
+        labels = [...Array(19).keys()].map(i => (i+2));
+        data = [14070,7077,13319,18143,22715,25896,24766,22884,21393,17833,15181,11487,7417,3157,1178,286,41,10,6];
+        color = 'rgba(255, 99, 132, 0.6)';
+      } else if (dataset === 'wiki') {
+        labels = [...Array(16).keys()].map(i => (i+2));
+        data = [8655,13718,27292,48416,68872,83266,76732,54456,35470,21736,11640,5449,2329,740,208,23];
+        color = 'rgba(54, 162, 235, 0.6)';
+      } else if (dataset === 'skitter') {
+        labels = [...Array(66).keys()].map(i => (i+2));
+        data = [2319807,3171609,1823321,939336,684873,598284,588889,608937,665661,728098,798073,877282,945194,980831,939987,839330,729601,639413,600192,611976,640890,673924,706753,753633,818353,892719,955212,999860,1034106,1055653,1017560,946717,878552,809485,744634,663650,583922,520239,474301,420796,367879,321829,275995,222461,158352,99522,62437,39822,30011,25637,17707,9514,3737,2042,1080,546,449,447,405,283,242,146,84,49,22,4];
+        color = 'rgba(255, 206, 86, 0.6)';
+      }
+      new Chart(document.getElementById(`chart-${dataset}`), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: 'Number of Cliques', data: data, backgroundColor: color, borderRadius: 6 }]
+        },
+        options: {
+          animation: { duration: 1500 },
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#fff', titleColor: '#000', bodyColor: '#000' }
+          },
+          scales: {
+            x: { grid: { color: '#eee' } },
+            y: { beginAtZero: true, grid: { color: '#eee' } }
+          }
+        }
+      });
+    }
+
+    function renderTimeComparisonChart() {
+  const ctx = document.getElementById('chart-time-comparison').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Wiki-Vote (7.1k nodes)', 'Email-Enron (36k nodes)', 'AS-Skitter (1.7M nodes)'],
+      datasets: [{
+        label: 'Execution Time (seconds)',
+        data: [7.38, 9.56, 2698.67],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(255, 206, 86, 0.6)'
+        ],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      animation: {
+        duration: 1500
+      },
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#000',
+          bodyColor: '#000',
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.raw.toFixed(2)} seconds`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Dataset',
+            color: '#333',
+            font: { weight: 'bold' }
+          },
+          grid: { color: '#eee' }
+        },
+        y: {
+          type: 'logarithmic',
+          title: {
+            display: true,
+            text: 'Execution Time (log scale)',
+            color: '#333',
+            font: { weight: 'bold' }
+          },
+          grid: { color: '#eee' },
+          min: 1,
+          ticks: {
+            callback: function(value) {
+              return Number(value).toLocaleString() + 's';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+
+
+    window.onload = function() {
+      renderChart('enron');
+      renderChart('wiki');
+      renderChart('skitter');
+      renderTimeComparisonChart();
+    };
+  </script>
+</body>
+</html>

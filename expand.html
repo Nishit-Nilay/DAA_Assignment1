@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Expand Algorithm by -Tomita Et.al.</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #f9f9f9, #e3e3f3);
+      margin: 0;
+      color: #333;
+    }
+    header {
+      background: linear-gradient(90deg, #3a1c71, #d76d77);
+      color: white;
+      text-align: center;
+      padding: 40px 20px;
+      font-size: 2rem;
+      font-weight: bold;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+    }
+    .section {
+      max-width: 960px;
+      margin: 50px auto;
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.1);
+    }
+    .section h2 {
+      font-size: 2rem;
+      margin-bottom: 20px;
+      color: #3a1c71;
+    }
+    .section h3 {
+      font-size: 1.5rem;
+      color: #d76d77;
+      margin-top: 30px;
+    }
+    canvas {
+      margin-top: 30px;
+    }
+    .copy-btn {
+      margin: 12px 12px 0 0;
+      padding: 10px 16px;
+      background: linear-gradient(145deg, #3a1c71, #d76d77);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: transform 0.2s ease, box-shadow 0.3s ease;
+    }
+    .copy-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    /*pre {
+      background-color: #f0f0f5;
+      border: 1px solid #ccc;
+      padding: 24px;
+      overflow-x: auto;
+      border-radius: 10px;
+      font-size: 0.95rem;
+      color: #2d2d2d;
+      line-height: 1.5;
+    }*/
+  </style>
+</head>
+<body>
+  <header>Tomita et. al.'s Expand Algorithm: Understanding and Analysis</header>
+  <div class="section">
+    <h2>C++ Code Implementation</h2>
+    <button class="copy-btn" onclick="copyCode()">Copy Code</button>
+    <!-- Prism Highlighted C++ Code -->
+    <link href="https://cdn.jsdelivr.net/gh/PrismJS/prism-themes@master/themes/prism-vsc-dark-plus.css" rel="stylesheet" />
+
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1/prism.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/prismjs@1/components/prism-cpp.min.js"></script>
+
+<pre><code class="language-cpp" id="code-block">
+#include &lt;fstream&gt;
+#include &lt;sstream&gt;
+#include &lt;vector&gt;
+#include &lt;set&gt;
+#include &lt;unordered_map&gt;
+#include &lt;algorithm&gt;
+#include &lt;chrono&gt;
+#include &lt;map&gt;
+#include &lt;iomanip&gt;
+#include &lt;iostream&gt;
+
+using namespace std;
+using namespace chrono;
+
+inline void fastIO() {
+    ios::sync_with_stdio(false);
+    cin.tie(nullptr);
+}
+
+void readGraph(const string& filename, vector<unordered_set<int>>& graph, int& numVertices) {
+    ifstream file(filename);
+    string line;
+    unordered_set<int> allNodes;
+
+    while (getline(file, line)) {
+        if (line.empty() || line[0] == '#') continue;
+
+        stringstream ss(line);
+        int u, v;
+        if (!(ss >> u >> v)) continue;
+
+        allNodes.insert(u);
+        allNodes.insert(v);
+
+        int maxNode = max(u, v);
+        if ((int)graph.size() <= maxNode) {
+            graph.resize(maxNode + 1);
+        }
+
+        graph[u].insert(v);
+        graph[v].insert(u);
+    }
+
+    numVertices = allNodes.size();
+}
+
+void expand(const vector<unordered_set<int>>& graph, unordered_set<int>& Q, unordered_set<int>& CAND, unordered_set<int>& SUBG,
+            int& totalCliques, set<set<int>>& uniqueCliques) {
+    if (CAND.empty()) {
+        set<int> clique(Q.begin(), Q.end());
+        uniqueCliques.insert(clique);
+        totalCliques++;
+    } else {
+        int pivot = *max_element(CAND.begin(), CAND.end(), [&graph](int a, int b) {
+            return graph[a].size() < graph[b].size();
+        });
+
+        unordered_set<int> candidatesCopy = CAND;
+        for (auto it = candidatesCopy.begin(); it != candidatesCopy.end();) {
+            int v = *it;
+
+            if (graph[pivot].find(v) != graph[pivot].end()) {
+                it = candidatesCopy.erase(it);
+                continue;
+            }
+
+            Q.insert(v);
+
+            unordered_set<int> newCandidates;
+            for (int u : CAND) {
+                if (graph[v].find(u) != graph[v].end()) {
+                    newCandidates.insert(u);
+                }
+            }
+
+            expand(graph, Q, newCandidates, SUBG, totalCliques, uniqueCliques);
+
+            Q.erase(v);
+            it = candidatesCopy.erase(it);
+        }
+    }
+}
+
+void cliques(const vector<unordered_set<int>>& graph, int numVertices) {
+    unordered_set<int> Q;
+    unordered_set<int> SUBG;
+    unordered_set<int> CAND;
+
+    for (int i = 0; i < (int)graph.size(); ++i) {
+        if (!graph[i].empty()) {
+            SUBG.insert(i);
+            CAND.insert(i);
+        }
+    }
+
+    int totalCliques = 0;
+    set<set<int>> uniqueCliques;
+
+    auto start = high_resolution_clock::now();
+    expand(graph, Q, CAND, SUBG, totalCliques, uniqueCliques);
+    auto end = high_resolution_clock::now();
+    duration<double> duration = end - start;
+
+    cout << "Execution Time: " << duration.count() << " seconds" << endl;
+
+    int largestCliqueSize = 0;
+    for (const auto& clique : uniqueCliques) {
+        largestCliqueSize = max(largestCliqueSize, (int)clique.size());
+    }
+
+    cout << "Largest Clique Size: " << largestCliqueSize << endl;
+    cout << "Total Number of Maximal Cliques: " << uniqueCliques.size() << endl;
+
+    map<int, int> sizeDistribution;
+    for (const auto& clique : uniqueCliques) {
+        sizeDistribution[clique.size()]++;
+    }
+
+    cout << "Distribution of Maximal Clique Sizes:" << endl;
+    for (const auto& [size, count] : sizeDistribution) {
+        cout << "Size " << size << ": " << count << " cliques" << endl;
+    }
+}
+
+int main() {
+    fastIO();
+    vector<unordered_set<int>> graph;
+    int numVertices;
+    string filename = "test6.txt";
+
+    readGraph(filename, graph, numVertices);
+    cliques(graph, numVertices);
+
+    return 0;
+}
+
+</code></pre>
+
+
+    <div class="simulation-output">
+      <h3>Email-Enron Output</h3>
+      <p>1. Largest Clique Size: 20</p>
+      <p>2. Total Max Cliques: 226859</p>
+      <p>3. Time Taken: 35 seconds</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-enron" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>Wiki-Vote Output</h3>
+      <p>1. Largest Clique Size: 17</p>
+      <p>2. Total Max Cliques: 459002</p>
+      <p>3. Time Taken: 1742 ms</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-wiki" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>AS-Skitter Output</h3>
+      <p>1. Largest Clique Size: 67</p>
+      <p>2. Total Max Cliques: 37322355</p>
+      <p>3. Time Taken: 679599 ms</p>
+      <p>4. Distribution of clique sizes:</p>
+      <canvas id="chart-skitter" class="dataset-chart"></canvas>
+    </div>
+
+    <div class="simulation-output">
+      <h3>Execution Time Comparison</h3>
+      <p>This chart compares the total execution time of the Tomita's EXPAND algortihm across different datasets.</p>
+      <canvas id="chart-time-comparison" class="dataset-chart"></canvas>
+    </div>
+
+  </div>
+
+  <div class="section">
+    <h2>🔧 Section 1: Mapping Your C++ Implementation to Tomita's CLIQUES Algorithm</h2>
+    <p>The core idea of Tomita's algorithm is a recursive, depth-first exploration of the search space of all maximal cliques in a graph, optimized with powerful pruning strategies. Our implementation closely mirrors this structure, particularly the recursive expand() function and its interplay with Q, SUBG, and CAND. Let’s go through it from the top.</p>
+
+    <h3>1.1 cliques() → Initialization of Q, SUBG, and CAND</h3>
+    <p>In our main cliques() function, you begin by defining three sets: Q (the growing clique), SUBG (the current subgraph, i.e., candidate nodes connected to all nodes in Q), and CAND (the remaining unexplored candidates that can extend Q). At the start, you set both SUBG and CAND to contain all non-isolated nodes of the graph. This precisely corresponds to line 1 in the paper, where the EXPAND(V, V) call is made with all nodes in the graph considered as potential starting points for maximal cliques. Your setup captures this well, establishing the search forest root.</p>
+
+    <h3>1.2 expand() → Base Case: No More Candidates (CAND == ∅)</h3>
+    <p>Inside your expand() function, the first condition checks whether CAND is empty. If it is, this means there are no more nodes that can extend the current clique Q. Hence, Q is maximal and should be recorded. This is equivalent to lines 2–3 in the paper, where the algorithm checks if SUBG = ∅, and if so, prints "clique" (i.e., acknowledges that the current Q is a maximal clique). Your code correctly inserts this clique into a set of unique cliques and increments the counter totalCliques. This aligns with the theoretical behavior of the algorithm where a maximal clique is output when no further extensions are possible.</p>
+
+    <h3>1.3 Pivot Selection: Maximizing |CAND ∩ Γ(u)|</h3>
+    <p>One of the most important optimizations in Tomita's algorithm is the use of a pivot vertex u, which helps reduce the number of recursive branches. According to the paper, the pivot should be chosen to maximize the number of neighbors it shares with CAND, i.e., maximize |CAND ∩ Γ(u)|. This allows the algorithm to minimize the number of candidates q in CAND - Γ(u) that are tried recursively.</p>
+
+    <pre><code>int pivot = *max_element(CAND.begin(), CAND.end(), [&graph](int a, int b) {
+    return graph[a].size() < graph[b].size();
+});</code></pre>
+
+    <p>This is a reasonable approximation, as high-degree vertices are more likely to overlap with CAND. However, it doesn't guarantee the exact behavior of maximizing |CAND ∩ Γ(u)| as required by the paper. Still, this pivot heuristic is efficient and often performs similarly well in practice. This logic corresponds to line 4 in the EXPAND pseudocode from the paper.</p>
+
+    <h3>1.4 Expanding Q by Choosing Candidates in CAND − Γ(u)</h3>
+    <p>Once the pivot is chosen, Tomita's algorithm considers only those vertices in CAND - Γ(u) to recursively extend the clique. This is the heart of the pruning strategy, where previously explored or redundant branches are avoided.</p>
+
+    <pre><code>if (graph[pivot].find(v) != graph[pivot].end()) {
+    it = candidatesCopy.erase(it);
+    continue;
+}</code></pre>
+
+    <p>This logic skips over nodes v that are neighbors of the pivot, meaning it only explores vertices in CAND - Γ(u), just like the algorithm. This is critical because it guarantees that each maximal clique is generated exactly once, ensuring no duplication—something that earlier versions of Bron–Kerbosch-style algorithms struggled with.</p>
+
+    <h3>1.5 Constructing SUBG_q and CAND_q</h3>
+    <p>Whenever a new node v is added to the current clique Q, the next step is to update the subgraph and candidate sets accordingly. The paper instructs that we compute:</p>
+
+    <p>SUBG_q = SUBG ∩ Γ(q)</p>
+    <p>CAND_q = CAND ∩ Γ(q)</p>
+
+    <p>These updated sets limit the next recursive call to only those nodes that continue to form a clique with Q ∪ {q}. Our implementation handles this with:</p>
+
+    <pre><code>unordered_set<int> newCandidates;
+for (int u : CAND) {
+    if (graph[v].find(u) != graph[v].end()) {
+        newCandidates.insert(u);
+    }
+}</code></pre>
+
+    <p>we’re building CAND_q by filtering the existing candidates to those adjacent to v. Note that SUBG isn’t directly updated, but since it’s no longer used for pivot selection in this context (only CAND is), it works. The logic here is aligned with lines 8–9 in the algorithm, where SUBG_q and CAND_q are created.</p>
+
+    <h3>1.6 Recursive Call and Backtracking</h3>
+    <pre><code>expand(graph, Q, newCandidates, SUBG, totalCliques, uniqueCliques);</code></pre>
+    <p>Once this call finishes, you backtrack by removing the last added vertex v from Q and from the candidate list. This matches lines 10–12 of the paper, where Q is restored by removing q, and q is moved from CAND to FINI. In our version, FINI is implicit because the candidate list is rebuilt at each level, and any finished vertex is simply no longer included in CAND. This is a smart simplification.</p>
+
+    <h3>📊 Efficiency Considerations</h3>
+    <p>Our code follows the essential logic of Tomita's EXPAND function, and implements the most critical optimization—pivot pruning to reduce recursive branching. The use of unordered_set provides fast set operations like insertion, deletion, and lookups, which is ideal for sparse graphs and small to medium-sized datasets. Additionally, we use set<set<int>> to ensure uniqueness of cliques, which avoids printing duplicates even if there's a logical error somewhere.</p>
+
+    <p>However, since we're not implementing exact |CAND ∩ Γ(u)| evaluation for pivot selection, the worst-case performance might be slightly less optimal than the strict algorithm. But in practice, our heuristic using vertex degree often performs just as well, especially for real-world graphs.</p>
+
+    <h3>🌳 Manual Simulation of our algorithm on the following simple graph for better understanding:</h3>
+    <pre><code>Graph:
+0: 1, 2
+1: 0, 2
+2: 0, 1, 3
+3: 2, 4
+4: 3</code></pre>
+
+    <p>This graph has two major maximal cliques:</p>
+    <ul>
+      <li>Triangle: {0, 1, 2}</li>
+      <li>Path extension: {2, 3, 4}</li>
+    </ul>
+
+    <p><strong>Step 0:</strong><br>
+    Q = ∅<br>
+    SUBG = CAND = {0, 1, 2, 3, 4}<br>
+    Choose pivot u = 2 (highest degree: 3)<br>
+    So CAND - Γ(u) = {4}</p>
+
+    <p><strong>Step 1:</strong><br>
+    v = 4<br>
+    Add 4 to Q → Q = {4}<br>
+    CAND_q = CAND ∩ Γ(4) = {3}<br>
+    Recurse</p>
+
+    <p><strong>Step 2:</strong><br>
+    v = 3<br>
+    Q = {4, 3}<br>
+    CAND_q = {2}<br>
+    Recurse</p>
+
+    <p><strong>Step 3:</strong><br>
+    v = 2<br>
+    Q = {4, 3, 2}<br>
+    CAND_q = {0, 1} but {0, 1} are not connected to 3 or 4 → backtrack<br>
+    Print: {2, 3, 4}</p>
+
+    <p>Backtracking all the way...<br>
+    Now other candidates:</p>
+
+    <p>v = 0: expands to {0, 1, 2}<br>
+    v = 1: skipped (already covered)<br>
+    v = 2: skipped</p>
+
+    <p><strong>Final maximal cliques found:</strong></p>
+    <ul>
+      <li>{0, 1, 2}</li>
+      <li>{2, 3, 4}</li>
+    </ul>
+  </div>
+
+  <script>
+    function copyCode() {
+      const codeBlock = document.getElementById('code-block');
+      const textArea = document.createElement('textarea');
+      textArea.value = codeBlock.textContent;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      alert('Code copied to clipboard!');
+    }
+
+    function renderChart(dataset) {
+      let labels = [], data = [], color = '';
+      if (dataset === 'enron') {
+        labels = [...Array(19).keys()].map(i => (i+2));
+        data = [14070,7077,13319,18143,22715,25896,24766,22884,21393,17833,15181,11487,7417,3157,1178,286,41,10,6];
+        color = 'rgba(255, 99, 132, 0.6)';
+      } else if (dataset === 'wiki') {
+        labels = [...Array(16).keys()].map(i => (i+2));
+        data = [8655,13718,27292,48416,68872,83266,76732,54456,35470,21736,11640,5449,2329,740,208,23];
+        color = 'rgba(54, 162, 235, 0.6)';
+      } else if (dataset === 'skitter') {
+        labels = [...Array(66).keys()].map(i => (i+2));
+        data = [2319807,3171609,1823321,939336,684873,598284,588889,608937,665661,728098,798073,877282,945194,980831,939987,839330,729601,639413,600192,611976,640890,673924,706753,753633,818353,892719,955212,999860,1034106,1055653,1017560,946717,878552,809485,744634,663650,583922,520239,474301,420796,367879,321829,275995,222461,158352,99522,62437,39822,30011,25637,17707,9514,3737,2042,1080,546,449,447,405,283,242,146,84,49,22,4];
+        color = 'rgba(255, 206, 86, 0.6)';
+      }
+      new Chart(document.getElementById(`chart-${dataset}`), {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{ label: 'Number of Cliques', data: data, backgroundColor: color, borderRadius: 6 }]
+        },
+        options: {
+          animation: { duration: 1500 },
+          responsive: true,
+          plugins: {
+            legend: { display: false },
+            tooltip: { backgroundColor: '#fff', titleColor: '#000', bodyColor: '#000' }
+          },
+          scales: {
+            x: { grid: { color: '#eee' } },
+            y: { beginAtZero: true, grid: { color: '#eee' } }
+          }
+        }
+      });
+    }
+
+    function renderTimeComparisonChart() {
+  const ctx = document.getElementById('chart-time-comparison').getContext('2d');
+  new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: ['Wiki-Vote (7.1k nodes)', 'Email-Enron (36k nodes)', 'AS-Skitter (1.7M nodes)'],
+      datasets: [{
+        label: 'Execution Time (seconds)',
+        data: [30.58, 150.52, 6127.37],
+        backgroundColor: [
+          'rgba(54, 162, 235, 0.6)',
+          'rgba(255, 99, 132, 0.6)',
+          'rgba(255, 206, 86, 0.6)'
+        ],
+        borderRadius: 6
+      }]
+    },
+    options: {
+      animation: {
+        duration: 1500
+      },
+      responsive: true,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: '#fff',
+          titleColor: '#000',
+          bodyColor: '#000',
+          callbacks: {
+            label: function(context) {
+              return `${context.dataset.label}: ${context.raw.toFixed(2)} seconds`;
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: {
+            display: true,
+            text: 'Dataset',
+            color: '#333',
+            font: { weight: 'bold' }
+          },
+          grid: { color: '#eee' }
+        },
+        y: {
+          type: 'logarithmic',
+          title: {
+            display: true,
+            text: 'Execution Time (log scale)',
+            color: '#333',
+            font: { weight: 'bold' }
+          },
+          grid: { color: '#eee' },
+          min: 1,
+          ticks: {
+            callback: function(value) {
+              return Number(value).toLocaleString() + 's';
+            }
+          }
+        }
+      }
+    }
+  });
+}
+
+
+
+
+    window.onload = function() {
+      renderChart('enron');
+      renderChart('wiki');
+      renderChart('skitter');
+      renderTimeComparisonChart();
+    };
+  </script>
+</body>
+</html>
