@@ -4,6 +4,7 @@ How to Compile and Run:
 1. The input file(dataset) place the .txt input dataset file in the same folder and you have to write the testcase.txt in the code and save it.
 2. ## Important Compilation step:
 to compile:  g++ c++17 -O3 -o a filename.cpp
+
 to run :  ./a
 Readme Link : https://github.com/Nishit-Nilay/DAA_Assignment1/edit/main/README.md
 ## Individual Contributions :
